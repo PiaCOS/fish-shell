@@ -603,6 +603,9 @@ pub struct Job {
     /// messages about job status on the terminal.
     command_str: WString,
 
+    /// The launch directory of the command
+    pub launch_dir: String,
+
     /// All the processes in this job.
     pub processes: Box<[Process]>,
 
@@ -618,11 +621,12 @@ pub struct Job {
 }
 
 impl Job {
-    pub fn new(properties: JobProperties, command_str: WString) -> Self {
+    pub fn new(properties: JobProperties, command_str: WString, launch_dir: String) -> Self {
         static NEXT_INTERNAL_JOB_ID: AtomicU64 = AtomicU64::new(0);
         Job {
             properties,
             command_str,
+            launch_dir,
             internal_job_id: NEXT_INTERNAL_JOB_ID.fetch_add(1, Ordering::Relaxed),
             ..Default::default()
         }
@@ -635,6 +639,11 @@ impl Job {
     /// Returns the command.
     pub fn command(&self) -> &wstr {
         &self.command_str
+    }
+
+    /// Returns the launch path.
+    pub fn launch_dir(&self) -> &str {
+        &self.launch_dir
     }
 
     /// Borrow the job's process list.

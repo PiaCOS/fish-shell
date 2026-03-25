@@ -1624,7 +1624,10 @@ impl<'a> ExecutionContext<'a> {
             props.from_event_handler = sc.is_event;
         }
 
-        let mut job = Job::new(props, self.node_source_owned(job_node));
+        // HERE
+        let launch_dir = "Hellooo it's Navi :3".to_owned();
+
+        let mut job = Job::new(props, self.node_source_owned(job_node), launch_dir);
 
         // We are about to populate a job. One possible argument to the job is a command substitution
         // which may be interested in the job that's populating it, via '--on-job-exit caller'. Record

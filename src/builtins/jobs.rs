@@ -40,7 +40,13 @@ fn cpu_use(j: &Job) -> f64 {
 }
 
 /// Print information about the specified job.
-fn builtin_jobs_print(j: &Job, mode: JobsPrintMode, header: bool, streams: &mut IoStreams) {
+fn builtin_jobs_print(
+    j: &Job,
+    mode: JobsPrintMode,
+    header: bool,
+    show_dir: bool,
+    streams: &mut IoStreams,
+) {
     let pgid = match j.get_pgid() {
         Some(pgid) => pgid.to_string(),
         None => "-".to_owned(),
@@ -63,6 +69,10 @@ fn builtin_jobs_print(j: &Job, mode: JobsPrintMode, header: bool, streams: &mut 
                 out += wgettext!("State");
                 out.push('\t');
                 out += wgettext!("Command");
+                if show_dir {
+                    out.push('\t');
+                    out += wgettext!("Path");
+                }
                 out.push('\n');
             }
 
@@ -84,6 +94,11 @@ fn builtin_jobs_print(j: &Job, mode: JobsPrintMode, header: bool, streams: &mut 
                 EscapeStringStyle::Script(EscapeFlags::NO_PRINTABLES),
             );
             out += &cmd[..];
+
+            if show_dir {
+                out += "\t";
+                out += j.launch_dir();
+            }
 
             out += "\n";
             streams.out.append(&out);
@@ -127,6 +142,7 @@ fn builtin_jobs_print(j: &Job, mode: JobsPrintMode, header: bool, streams: &mut 
 const SHORT_OPTIONS: &wstr = L!("cghlpq");
 const LONG_OPTIONS: &[WOption] = &[
     wopt(L!("command"), ArgType::NoArgument, 'c'),
+    wopt(L!("directory"), ArgType::NoArgument, 'd'),
     wopt(L!("group"), ArgType::NoArgument, 'g'),
     wopt(L!("help"), ArgType::NoArgument, 'h'),
     wopt(L!("last"), ArgType::NoArgument, 'l'),
@@ -144,6 +160,7 @@ pub fn jobs(parser: &Parser, streams: &mut IoStreams, argv: &mut [&wstr]) -> Bui
 
     let argc = argv.len();
     let mut found = false;
+    let mut show_dir = false;
     let mut mode = JobsPrintMode::Default;
     let mut print_last = false;
 
@@ -164,6 +181,9 @@ pub fn jobs(parser: &Parser, streams: &mut IoStreams, argv: &mut [&wstr]) -> Bui
             }
             'l' => {
                 print_last = true;
+            }
+            'd' => {
+                show_dir = true;
             }
             'h' => {
                 builtin_print_help(parser, streams, cmd);
@@ -189,7 +209,7 @@ pub fn jobs(parser: &Parser, streams: &mut IoStreams, argv: &mut [&wstr]) -> Bui
         // Ignore unconstructed jobs, i.e. ourself.
         for j in &parser.jobs()[..] {
             if j.is_visible() {
-                builtin_jobs_print(j, mode, !streams.out_is_redirected, streams);
+                builtin_jobs_print(j, mode, !streams.out_is_redirected, show_dir, streams);
                 return Ok(SUCCESS);
             }
         }
@@ -226,7 +246,7 @@ pub fn jobs(parser: &Parser, streams: &mut IoStreams, argv: &mut [&wstr]) -> Bui
             }
 
             if let Some(j) = j.filter(|j| !j.is_completed() && j.is_constructed()) {
-                builtin_jobs_print(&j, mode, false, streams);
+                builtin_jobs_print(&j, mode, false, show_dir, streams);
                 found = true;
             } else {
                 if mode != JobsPrintMode::PrintNothing {
@@ -241,7 +261,13 @@ pub fn jobs(parser: &Parser, streams: &mut IoStreams, argv: &mut [&wstr]) -> Bui
         for j in &parser.jobs()[..] {
             // Ignore unconstructed jobs, i.e. ourself.
             if j.is_visible() {
-                builtin_jobs_print(j, mode, !found && !streams.out_is_redirected, streams);
+                builtin_jobs_print(
+                    j,
+                    mode,
+                    !found && !streams.out_is_redirected,
+                    show_dir,
+                    streams,
+                );
                 found = true;
             }
         }
